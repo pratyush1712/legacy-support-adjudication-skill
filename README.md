@@ -9,7 +9,8 @@ This package helps code-review agents decide whether backward-compatibility logi
 - `resources/evidence_rubric.md` — evidence levels and risk thresholds.
 - `resources/report_template.md` — copyable report format.
 - `resources/review_comment_templates.md` — review comments for common situations.
-- `examples/example_verdicts.md` — sample outputs.
+- `examples/example_verdicts.md` — expanded sample outputs and complex case studies.
+- `examples/decision_traps.md` — common false-removal traps and how to reason through them.
 - `examples/agent_prompt.md` — prompt wrapper for review agents.
 - `scripts/legacy_support_scan.py` — heuristic candidate scanner.
 - `scripts/git_support_archaeology.sh` — git history helper.
