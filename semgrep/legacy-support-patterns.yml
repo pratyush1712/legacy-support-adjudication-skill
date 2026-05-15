@@ -1,0 +1,47 @@
+rules:
+  - id: legacy-support-keywords-js-ts-py
+    message: "Possible legacy-support logic. Apply Legacy Support Adjudication before removing or expanding this path."
+    severity: INFO
+    languages: [javascript, typescript, python]
+    patterns:
+      - pattern-regex: '(?i)(legacy|backward.?compat|backcompat|compatibility|deprecated|fallback|old[_ -]?(schema|format|client|api|payload)|migration shim|transitional|dual[_ -]?(read|write)|TODO:? remove)'
+    metadata:
+      category: legacy-support-adjudication
+      recommended_action: "Identify the legacy contract, consumers, producer reality, evidence level, and verdict."
+
+  - id: api-deprecation-header-js-ts
+    message: "API deprecation/sunset signaling found. Verify policy, consumers, migration path, and sunset/removal evidence."
+    severity: INFO
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: "$RES.setHeader('Deprecation', $VAL)"
+          - pattern: "$RES.setHeader('Sunset', $VAL)"
+          - pattern: "$RES.headers.set('Deprecation', $VAL)"
+          - pattern: "$RES.headers.set('Sunset', $VAL)"
+    metadata:
+      category: api-lifecycle
+
+  - id: schema-fallback-python
+    message: "Possible old/new schema fallback. Verify persisted data and producer reality before removal."
+    severity: INFO
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: "$X.get($NEW) or $X.get($OLD)"
+          - pattern: "$X.get($OLD, ...)"
+          - pattern: "hasattr($OBJ, $OLD)"
+    metadata:
+      category: schema-migration-shim
+
+  - id: schema-fallback-js-ts
+    message: "Possible old/new schema fallback. Verify persisted data and producer reality before removal."
+    severity: INFO
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: "$X[$NEW] ?? $X[$OLD]"
+          - pattern: "$X.$NEW ?? $X.$OLD"
+          - pattern: "$X.$NEW || $X.$OLD"
+    metadata:
+      category: schema-migration-shim

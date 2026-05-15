@@ -1,0 +1,213 @@
+# Pattern inventory for Legacy Support Adjudication.
+# Agents may use this as search vocabulary and as a taxonomy for review reports.
+
+categories:
+  api_version_bridge:
+    description: Logic that supports old endpoints, old request/response shapes, or old API versions.
+    keywords:
+      - legacy
+      - compat
+      - compatibility
+      - backwards
+      - backward
+      - v1
+      - v2
+      - deprecated
+      - sunset
+      - deprecation
+      - old endpoint
+      - old payload
+      - alias
+      - transformResponse
+      - normalizeResponse
+    evidence_to_seek:
+      - OpenAPI/GraphQL schema references
+      - SDK/client usage
+      - access logs by endpoint/version
+      - mobile/web app release versions
+      - external documentation/support policy
+
+  schema_migration_shim:
+    description: Logic that reads/writes old DB schemas, old JSON fields, dual columns, or transitional row states.
+    keywords:
+      - migration
+      - backfill
+      - dual write
+      - dual-read
+      - old column
+      - legacy column
+      - nullable for migration
+      - transitional
+      - denormalized
+      - shadow column
+      - fallback field
+      - data repair
+    evidence_to_seek:
+      - migration files and migration strategy
+      - production row counts for legacy states
+      - background job and queue usage
+      - restore/rollback needs
+      - data retention/privacy obligations
+
+  format_normalizer:
+    description: Code that accepts or converts historical file formats, payload formats, enum values, field aliases, or serialized data.
+    keywords:
+      - normalize
+      - canonicalize
+      - coerce
+      - old format
+      - legacy format
+      - alias field
+      - snake_case
+      - camelCase
+      - enum alias
+      - parser fallback
+      - deserialize
+      - serialize
+    evidence_to_seek:
+      - import/export contracts
+      - user-uploaded file samples
+      - stored payload samples
+      - event replay constraints
+      - tests using historical fixtures
+
+  mobile_frontend_fallback:
+    description: Client-side support for old server responses, local storage/session keys, old deep links, or old mobile app versions.
+    keywords:
+      - localStorage
+      - sessionStorage
+      - AsyncStorage
+      - deep link
+      - old app version
+      - appVersion
+      - fallback route
+      - stale cache
+      - hydrate
+      - persisted state
+    evidence_to_seek:
+      - active app version distribution
+      - crash/error logs
+      - release notes
+      - persisted cache/local storage migration
+      - deep link analytics
+
+  feature_flag_cleanup:
+    description: Code paths kept for a historical feature flag state, rollout, experiment, or rollback branch.
+    keywords:
+      - feature flag
+      - experiment
+      - rollout
+      - kill switch
+      - fallback
+      - old experiment
+      - variant
+      - control
+      - treatment
+      - launch darkly
+      - statsig
+      - split
+    evidence_to_seek:
+      - flag configuration
+      - exposure data
+      - rollback policy
+      - experiment conclusion
+      - owner signoff
+
+  build_runtime_compat:
+    description: CI/build/deployment logic for retired runtimes, operating systems, browsers, package managers, or toolchains.
+    keywords:
+      - node 16
+      - node 18
+      - python 3.9
+      - old browser
+      - ie11
+      - polyfill
+      - legacy build
+      - compatibility build
+      - old runtime
+      - deprecated image
+      - old docker
+    evidence_to_seek:
+      - CI matrix
+      - deployment targets
+      - release branches
+      - supported runtime policy
+      - package lock constraints
+
+  operational_support:
+    description: Rarely used scripts/jobs for admin support, incident recovery, data repair, rollback, or customer-specific operations.
+    keywords:
+      - one-off
+      - support script
+      - repair
+      - cleanup
+      - rollback
+      - restore
+      - incident
+      - emergency
+      - admin only
+      - customer migration
+    evidence_to_seek:
+      - runbook references
+      - cron/scheduler configs
+      - last run timestamp
+      - incident docs
+      - owner confirmation
+
+  model_serving_fallback:
+    description: Compatibility around model versions, old feature schemas, fallback models, prompt schemas, or inference adapters.
+    keywords:
+      - model version
+      - fallback model
+      - old embedding
+      - old prompt
+      - schema version
+      - feature vector
+      - adapter
+      - migration model
+      - legacy classifier
+    evidence_to_seek:
+      - model registry usage
+      - feature store schema
+      - inference logs
+      - offline evaluation compatibility
+      - rollback constraints
+
+risk_keywords:
+  p0:
+    - auth
+    - payment
+    - billing
+    - privacy
+    - deletion
+    - compliance
+    - security
+    - encryption
+    - account access
+  p1:
+    - public api
+    - mobile
+    - database
+    - migration
+    - background job
+    - customer integration
+    - shared package
+  p2:
+    - admin
+    - analytics
+    - import
+    - export
+    - feature flag
+    - internal api
+  p3:
+    - test fixture
+    - local fallback
+    - retired build
+    - docs only
+
+verdicts:
+  retain: Still required or contract explicitly remains.
+  deploy_observability: Missing runtime/data evidence; instrument first.
+  deprecate: Consumers still exist or may exist; create formal migration/removal path.
+  quarantine: Isolate compatibility logic behind a named boundary while preserving behavior.
+  remove: Evidence shows support contract is gone and risk is controlled.
