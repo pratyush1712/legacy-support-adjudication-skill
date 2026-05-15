@@ -39,6 +39,31 @@ This skill gives agents a repeatable review method so they do not approve risky 
 
 ## Install
 
+### Skills CLI
+
+The recommended install path is the Skills CLI. The Skills directory documents `npx skills add <owner>/<skill-name>` as the standard install command, and leaderboard ranking is based on aggregate anonymous installs from this command.
+
+Find the skill:
+
+```bash
+npx skills find legacy support adjudication
+```
+
+Install directly from GitHub:
+
+```bash
+npx skills add pratyush1712/legacy-support-adjudication-skill
+```
+
+You can also search broader terms:
+
+```bash
+npx skills find code review
+npx skills find deprecation
+npx skills find compatibility
+npx skills find technical debt
+```
+
 ### Claude Code personal skill
 
 ```bash
@@ -87,6 +112,7 @@ From a repository you want to review:
 ```bash
 python ~/.claude/skills/legacy-support-adjudication/scripts/legacy_support_scan.py \
   --root . \
+  --format json \
   --output legacy-support-candidates.json
 
 python ~/.claude/skills/legacy-support-adjudication/scripts/render_lsa_report.py \
@@ -131,8 +157,14 @@ See [`examples/agent_prompt.md`](./examples/agent_prompt.md) for a fuller versio
 ## Run the scanner
 
 ```bash
-python scripts/legacy_support_scan.py --root . --output legacy-support-candidates.json
+python scripts/legacy_support_scan.py --root . --format json --output legacy-support-candidates.json
 python scripts/render_lsa_report.py legacy-support-candidates.json --output legacy-support-report.md
+```
+
+For a direct Markdown scan without the intermediate JSON file:
+
+```bash
+python scripts/legacy_support_scan.py --root . --format markdown --output legacy-support-scan.md
 ```
 
 The scanner finds candidates. It does **not** approve deletion. Agents should use the evidence rubric before making a removal recommendation.
