@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# # No third-party dependencies; stdlib only.
+# ///
 """Render scanner JSON into a compact review report."""
 
 from __future__ import annotations

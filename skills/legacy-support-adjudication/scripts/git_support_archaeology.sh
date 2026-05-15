@@ -22,6 +22,17 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
+# Fail fast with a clean error if we're not inside a git repository.
+# Without this, the underlying git commands print 'fatal: not a git
+# repository' on every call and the agent sees noise instead of a
+# usable error. Exit code 2 distinguishes 'wrong environment' from
+# exit code 1 ('bad arguments').
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Error: not a git repository (or any parent directory)." >&2
+  echo "Run this script from inside the repository you want to inspect." >&2
+  exit 2
+fi
+
 TOKEN="$1"
 PATH_ARG="${2:-}"
 
