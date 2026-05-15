@@ -1,0 +1,41 @@
+name: Add a legacy support case
+description: Propose a new example, trap, or verdict pattern for the skill.
+title: "Example case: "
+labels: ["example", "skill-improvement"]
+body:
+  - type: textarea
+    id: situation
+    attributes:
+      label: Situation
+      description: What compatibility path or cleanup decision should the skill cover?
+      placeholder: "A PR removes an old API field alias after the backend stopped emitting it..."
+    validations:
+      required: true
+  - type: textarea
+    id: trap
+    attributes:
+      label: Decision trap
+      description: What could an agent get wrong?
+      placeholder: "Current writers are clean, but old mobile clients may still send the field."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence to collect
+      description: What static, data, runtime, or owner evidence should be required?
+    validations:
+      required: true
+  - type: dropdown
+    id: verdict
+    attributes:
+      label: Likely verdict
+      options:
+        - RETAIN
+        - DEPLOY OBSERVABILITY
+        - DEPRECATE
+        - QUARANTINE
+        - REMOVE
+        - Unsure
+    validations:
+      required: true
