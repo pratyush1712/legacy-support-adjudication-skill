@@ -1,0 +1,102 @@
+[
+  {
+    "query": "Reviewing PR #4521 which removes the `user_id` field alias from our /v2/users endpoint — current web client sends only `userId` now. Can we delete this yet?",
+    "should_trigger": true,
+    "rationale": "Direct match: API field alias removal, reviewer explicitly asks 'can we delete this yet?'"
+  },
+  {
+    "query": "this PR drops the dual-read fallback on profile.display_name vs profile.name — migration ran in March, anything I should check before approving?",
+    "should_trigger": true,
+    "rationale": "Database migration fallback removal. Reviewer is explicitly asking for the adjudication."
+  },
+  {
+    "query": "can you take a look at this diff? it deletes the old recommendation algorithm now that new_recs_enabled has been 100% for 60 days",
+    "should_trigger": true,
+    "rationale": "Feature-flag fallback path being removed; the skill should ask about rollback implications even though the reviewer doesn't mention compatibility."
+  },
+  {
+    "query": "is this still needed? `if (payload.avatar_url || payload.avatarUrl || payload.profileImage)` — backend only returns avatarUrl now",
+    "should_trigger": true,
+    "rationale": "Mobile normalizer / payload alias. Reviewer uses indirect 'is this still needed?' — the description must catch this."
+  },
+  {
+    "query": "PR removes the v1 API route handler entirely — looks like nothing in the monorepo calls it",
+    "should_trigger": true,
+    "rationale": "Public API version removal. Local search is not sufficient evidence and the skill should flag the cross-boundary risk."
+  },
+  {
+    "query": "small cleanup PR — removing some commented-out code and TODO remove notes from legacy/payloadAliases.ts",
+    "should_trigger": true,
+    "rationale": "Path named legacy/ with TODO remove markers. Even a 'small cleanup' deserves the workflow before approval."
+  },
+  {
+    "query": "probably dead code? `if (oldFormat) { return normalizeOldShape(x) }` — nothing else in this repo sets oldFormat to true",
+    "should_trigger": true,
+    "rationale": "Fallback / normalizer with reviewer-language hedge 'probably dead code'. Indirect trigger."
+  },
+  {
+    "query": "removing the migration_v2_compat shim now that all customers have rolled forward, lmk if anything looks off",
+    "should_trigger": true,
+    "rationale": "Migration shim removal with explicit compat naming. Should trigger and ask about persisted data and rollback."
+  },
+  {
+    "query": "write a python script that reads a CSV and uploads each row to postgres",
+    "should_trigger": false,
+    "rationale": "Near-miss: mentions CSV and database but is an ordinary ETL request with no compatibility dimension."
+  },
+  {
+    "query": "review my new feature implementation: adding a webhook that fires when an order ships",
+    "should_trigger": false,
+    "rationale": "New code, not a compatibility path. Mentions webhook but for a new contract, not a legacy one."
+  },
+  {
+    "query": "can you help me fix this off-by-one error in my pagination logic?",
+    "should_trigger": false,
+    "rationale": "Ordinary bug fix unrelated to backward compatibility."
+  },
+  {
+    "query": "PR adds a deprecation warning to our internal logging library for the old log() function — users should call structured_log() instead. Can you review?",
+    "should_trigger": true,
+    "rationale": "Even though this is adding deprecation rather than removing, the skill applies: the verdict is DEPRECATE and the workflow covers the migration/sunset plan."
+  },
+  {
+    "query": "I'm refactoring this old endpoint to use async/await instead of callbacks — behavior should be identical, just modernizing the style",
+    "should_trigger": false,
+    "rationale": "Near-miss: word 'old' appears but the behavior is preserved; this is internal refactoring, not removing a compatibility contract."
+  },
+  {
+    "query": "this PR removes the legacy auth flow that supported pre-OAuth session tokens. all clients have migrated according to the auth team. ok to ship?",
+    "should_trigger": true,
+    "rationale": "P0 auth compatibility removal — exactly the kind of case where the skill should require E5 + E6 evidence even though the reviewer believes it's safe."
+  },
+  {
+    "query": "any idea why our build is broken on the legacy Node 14 CI runner? error says 'optional chaining unsupported'",
+    "should_trigger": false,
+    "rationale": "Near-miss: 'legacy' appears but the user is asking for build debugging, not adjudicating whether to drop Node 14 support. Different intent."
+  },
+  {
+    "query": "PR drops Node 14 from the CI matrix — internal users only, we announced the deprecation 6 months ago. Anything I'm missing?",
+    "should_trigger": true,
+    "rationale": "Build/runtime support removal with explicit deprecation context. Same Node 14 keyword as the prior negative — this one is the actual adjudication request."
+  },
+  {
+    "query": "what's the difference between LEFT JOIN and INNER JOIN in postgres?",
+    "should_trigger": false,
+    "rationale": "General SQL knowledge question, no compatibility context."
+  },
+  {
+    "query": "deleting the localStorage migration code from 2022 that read the old `user_prefs_v1` key and rewrote it to `userPreferences`. Safe to drop yet?",
+    "should_trigger": true,
+    "rationale": "Frontend storage migration cleanup with explicit 'safe to drop yet?' question."
+  },
+  {
+    "query": "the import parser still accepts the old pipe-delimited CSV format from before we switched to JSON exports in 2021. removing it now — three years should be enough right?",
+    "should_trigger": true,
+    "rationale": "Historical import format removal. The 'three years should be enough right?' framing is exactly the kind of confident-but-unevidenced removal the skill exists to catch."
+  },
+  {
+    "query": "can you explain how event sourcing works?",
+    "should_trigger": false,
+    "rationale": "Conceptual explanation request, not a code review."
+  }
+]

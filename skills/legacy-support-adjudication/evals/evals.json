@@ -1,0 +1,68 @@
+{
+  "skill_name": "legacy-support-adjudication",
+  "description": "Output-quality test cases for legacy-support-adjudication. Each case provides a realistic PR-review scenario and asserts properties of the verdict the skill should produce. The cases are derived from examples/example_verdicts.md and span the five verdict types and the four risk tiers.",
+  "evals": [
+    {
+      "id": "api-alias-unknown-mobile",
+      "prompt": "Review this PR: a backend endpoint accepts both `userId` and the older `user_id` request field. The PR removes the `user_id` alias because the current web frontend sends only `userId`. There's no telemetry on field usage and the mobile team wasn't consulted. Should this merge?",
+      "expected_output": "An adjudication verdict that does NOT approve removal. The skill should identify this as P1 risk (public API + mobile), note that local static evidence is insufficient for cross-boundary contracts, and recommend either DEPLOY OBSERVABILITY or QUARANTINE pending evidence on client-version distribution and access logs.",
+      "assertions": [
+        "The verdict is one of: DEPLOY OBSERVABILITY, QUARANTINE, DEPRECATE, RETAIN (NOT REMOVE)",
+        "The response classifies risk as P1 (or higher)",
+        "The response explicitly names mobile clients, SDKs, or external API consumers as unchecked layers",
+        "The response calls for runtime evidence (access logs / metrics / client-version breakdown) before removal",
+        "The response distinguishes 'current web producer no longer emits the field' from 'old reader is removable'",
+        "The output uses the Legacy Support Adjudication Verdict block format with Verdict, Confidence, Risk, Legacy contract, Consumer reality, Producer reality, Evidence, Required before merge, and Recommended cleanup path"
+      ]
+    },
+    {
+      "id": "db-fallback-after-backfill",
+      "prompt": "PR review: a reader falls back from `profile.display_name` to old nullable `profile.name`. The team ran a backfill migration in March that copied `name` into `display_name` for all rows, and writers were updated to write only `display_name`. A production query confirms zero rows where `display_name IS NULL AND name IS NOT NULL`. The PR removes the fallback reader. Approve?",
+      "expected_output": "Approval as REMOVE with High confidence and P1 risk, conditional on keeping rollback notes and preserving regression tests for the canonical `display_name` path. The skill should NOT require dropping the column in the same PR (that's a separate rollback-risk decision).",
+      "assertions": [
+        "The verdict is REMOVE",
+        "Confidence is High (or equivalent)",
+        "Risk is classified as P1",
+        "The response cites the production data scan (zero legacy-only rows) as decisive evidence",
+        "The response recommends keeping the rollback note or a guard against new legacy rows",
+        "The response does NOT recommend dropping the underlying column in the same PR"
+      ]
+    },
+    {
+      "id": "feature-flag-rollback-branch",
+      "prompt": "Review: our recommendation system has a flag `new_recs_enabled` that's been at 100% in production for 60 days. The incident playbook still names this flag as the emergency fallback if the new algorithm misbehaves. A PR deletes the old algorithm branch entirely. Sign off?",
+      "expected_output": "A QUARANTINE verdict, not REMOVE. The skill should recognize that zero normal traffic does not equal zero operational dependency when the path is named in a rollback plan.",
+      "assertions": [
+        "The verdict is QUARANTINE (or RETAIN with quarantine recommendation)",
+        "The response explicitly identifies the rollback playbook as a current consumer of the legacy path",
+        "The response recommends moving the old algorithm into a named compatibility module (e.g. legacy/recsFallback)",
+        "The response recommends instrumentation/alerting if the old branch ever executes",
+        "The response requires updating the incident playbook with a replacement rollback strategy before removal"
+      ]
+    },
+    {
+      "id": "auth-session-pre-oauth",
+      "prompt": "PR removes the legacy auth flow that supported pre-OAuth session tokens. The auth team says all clients have migrated. The PR has no rollback plan, no staged-rollout plan, and no customer communication. Is this safe to merge?",
+      "expected_output": "A NOT-YET verdict (RETAIN, DEPRECATE, or DEPLOY OBSERVABILITY) classified as P0. Even with owner verbal confirmation, P0 auth changes require E4 + E5 + E6 minimum: runtime evidence, contract confirmation, AND staged validation with rollback.",
+      "assertions": [
+        "The verdict is NOT REMOVE",
+        "Risk is classified as P0",
+        "The response cites the P0 evidence minimum (E4 + E5 + E6 or equivalent)",
+        "The response requires a staged rollout / canary / kill switch before removal",
+        "The response notes account-access or security implications of incorrectly removing auth compatibility"
+      ]
+    },
+    {
+      "id": "fresh-install-migration-history",
+      "prompt": "PR cleanup: deleting old migration files from 2020-2022 because the production database has long since applied them and the schema is stable. The migrations include things like `add_users_table`, `add_email_index`, and several backfill scripts. Clean to remove?",
+      "expected_output": "A RETAIN verdict — migration history is required for fresh-installs, staging environments, dev environments, and any future restore from a pre-migration backup. The skill should explicitly call out that 'production has applied them' is the wrong test.",
+      "assertions": [
+        "The verdict is RETAIN",
+        "The response explicitly notes that fresh installs (staging, dev, new env bootstrap) need the full migration history",
+        "The response distinguishes 'production has applied' from 'no environment needs to apply'",
+        "The response acknowledges backup/restore as a separate consumer of migration history",
+        "The response does NOT recommend deletion based on production state alone"
+      ]
+    }
+  ]
+}
