@@ -1,6 +1,6 @@
 ---
 name: legacy-support-adjudication
-description: Use during code review when a change touches backward-compatibility logic, migration shims, deprecated API/version bridges, old schema or payload handling, feature-flag fallbacks, transitional formats, old client support, historical data readers, or retired runtime/build support. Produces an evidence-based verdict: retain, instrument, deprecate, quarantine, or remove.
+description: "Use during code review when a change touches backward-compatibility logic, migration shims, deprecated API/version bridges, old schema or payload handling, feature-flag fallbacks, transitional formats, old client support, historical data readers, or retired runtime/build support. Produces an evidence-based verdict: retain, instrument, deprecate, quarantine, or remove."
 ---
 
 # Legacy Support Adjudication
