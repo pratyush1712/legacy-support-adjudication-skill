@@ -1,194 +1,152 @@
-# Legacy Support Adjudication Skill
+---
+name: legacy-support-adjudication
+description: Use during code review when a change touches backward-compatibility logic, migration shims, deprecated API/version bridges, old schema or payload handling, feature-flag fallbacks, transitional formats, old client support, historical data readers, or retired runtime/build support. Produces an evidence-based verdict: retain, instrument, deprecate, quarantine, or remove.
+---
+
+# Legacy Support Adjudication
 
 ## Purpose
 
-Use this skill during code review when a change touches backward-compatibility logic, migration shims, old schema handling, transitional formats, feature-flag fallbacks, deprecated API versions, old client behavior, data import/export compatibility, or build/runtime support for retired environments.
+Use this skill when reviewing code that may exist mainly for historical compatibility. The goal is to decide whether the support contract is still real, not merely whether the code is locally reachable.
 
-This skill does **not** merely ask whether code is reachable. It asks whether the historical support contract is still real.
+Backward compatibility often spans code, persisted data, mobile clients, public APIs, SDKs, background jobs, queues, feature flags, build systems, and rollback procedures. A safe review must trace those dependencies before approving removal.
 
-The expected output is a verdict with evidence, confidence, risk, and a concrete next action:
+The skill returns a concrete verdict with evidence, confidence, risk, and next action:
 
-- **RETAIN** — still required; preserve or strengthen tests/docs.
-- **DEPLOY OBSERVABILITY** — not enough evidence; instrument before deciding.
-- **DEPRECATE** — still possibly used; start a formal migration/removal path.
-- **QUARANTINE** — isolate behind a named compatibility boundary while evidence is gathered.
-- **REMOVE** — support contract no longer exists; remove with safeguards.
+- **RETAIN** — the compatibility contract still exists.
+- **DEPLOY OBSERVABILITY** — the path may be removable, but runtime or data evidence is missing.
+- **DEPRECATE** — consumers may still exist; start a formal migration and sunset path.
+- **QUARANTINE** — isolate the compatibility path while preserving behavior and collecting evidence.
+- **REMOVE** — evidence shows the compatibility contract is closed.
 
-## When to invoke
+## Invoke this skill when
 
-Invoke this skill when you see any of the following in a diff, issue, or review request:
+A diff, PR, issue, or review discussion includes any of these signals:
 
-- Branches named `legacy`, `compat`, `backcompat`, `fallback`, `old`, `v1`, `deprecated`, `migration`, `shim`, `transitional`, `adapter`, `normalize`, `upgrade`, `downgrade`, or `TODO remove`.
-- Code that accepts multiple schema shapes, API versions, enum names, payload formats, field names, storage layouts, client versions, auth formats, or protocol variants.
-- Database migrations that preserve old columns/tables, dual-write/dual-read logic, shadow fields, nullable historical fields, backfill scripts, or data repair jobs.
-- Frontend/mobile code that normalizes historical server responses, handles old app versions, reads stale local storage keys, or supports old deep links.
-- CI/build/deployment logic for old runtimes, old package managers, old operating systems, retired browsers, retired environments, or old toolchains.
-- Any reviewer comment like “can we delete this yet?”, “is this still needed?”, “old clients?”, “migration complete?”, or “probably dead code.”
+- Names such as `legacy`, `compat`, `backcompat`, `fallback`, `old`, `v1`, `deprecated`, `migration`, `shim`, `adapter`, `normalize`, `upgrade`, `downgrade`, `transitional`, or `TODO remove`.
+- Code accepting multiple field names, schema versions, API versions, enum names, payload formats, auth/session formats, client versions, storage layouts, or protocol variants.
+- Database code involving old columns/tables, nullable historical fields, dual reads, dual writes, shadow fields, backfills, repair jobs, or migration cleanup.
+- Frontend or mobile code normalizing historical API responses, old app versions, stale local storage/session keys, retired routes, or old deep links.
+- CI/build/deployment logic for old runtimes, old package managers, retired browsers, old operating systems, release branches, or retired environments.
+- Reviewer language like “can we delete this yet?”, “is this still needed?”, “old clients?”, “migration complete?”, “probably dead code”, or “cleanup legacy path.”
 
 ## Core questions
 
-For every candidate legacy path, answer these five questions:
+For each candidate compatibility path, answer five questions:
 
-1. **What old thing is being supported?**  
-   Identify the exact contract: old endpoint, old response shape, old DB schema, old enum, old feature flag state, old client version, old config, old job, old import/export format, old auth/session format, etc.
+1. **What old thing is supported?** Identify the exact legacy contract: endpoint, field, schema, enum, flag state, client version, file format, event shape, auth/session format, DB state, runtime, or deployment mode.
+2. **Who still uses it?** Trace consumers across code, tests, generated clients, SDKs, data, jobs, queues, configs, dashboards, logs, docs, and owners.
+3. **Can new inputs still produce it?** Check whether current systems can still create, receive, hydrate, import, replay, cache, restore, or roll back into the old shape.
+4. **What breaks if it disappears?** Identify runtime errors, data loss, failed migrations, broken API clients, user-visible regressions, failed jobs, failed imports, rollout risk, and rollback risk.
+5. **What evidence is enough?** Match the evidence requirement to the risk level. Do not require the same proof for a test-only shim and a public mobile API fallback.
 
-2. **Who still uses it?**  
-   Trace actual consumers across code, data, clients, deployments, jobs, queues, configs, docs, tests, support scripts, analytics, and operational dashboards.
+## Evidence levels
 
-3. **Can new inputs still produce it?**  
-   Determine whether current systems can still create, receive, hydrate, import, sync, cache, or replay the legacy shape.
+Use the strongest evidence available. Lower confidence when a relevant layer cannot be inspected.
 
-4. **What breaks if it disappears?**  
-   Identify runtime failures, data loss, migration gaps, API breakage, user-visible regressions, failed background jobs, rollback risks, and support obligations.
+| Level | Evidence | Meaning |
+|---|---|---|
+| E0 | Suspicion only | Names, comments, or history suggest legacy support. Investigation starts here. |
+| E1 | Local static references | Local search/AST shows direct references or absence of references. Useful but weak. |
+| E2 | Cross-boundary static references | Related repos, clients, generated code, configs, scripts, tests, docs, or SDKs checked. |
+| E3 | Data reality | DB rows, object storage, queues, events, imports, caches, local storage, or fixtures checked. |
+| E4 | Runtime reality | Logs, traces, metrics, endpoint hits, feature-flag exposure, error reports, or access records checked over a representative window. |
+| E5 | Contract/owner confirmation | API policy, support policy, migration notice, owner signoff, customer/integration confirmation, or release policy checked. |
+| E6 | Staged validation | Dark disable, canary, shadow removal, kill switch, rollback, or staged rollout tested. |
 
-5. **What evidence is strong enough to remove it?**  
-   Require evidence appropriate to the risk level: static proof, runtime telemetry, data scans, owner confirmation, staged disable, tests, rollout plan, and rollback plan.
+Minimum standard:
 
-## Evidence hierarchy
+- **P3 low-risk internal cleanup:** E1 plus tests may be enough.
+- **P2 internal/shared behavior:** E2 plus owner or test confirmation.
+- **P1 data/API/mobile/job compatibility:** E3 and/or E4 plus rollout or migration plan.
+- **P0 auth, billing, privacy, deletion, security, or irreversible data mutation:** E4 + E5 + E6.
 
-Use the strongest evidence available. Do not treat weaker evidence as proof.
-
-| Level | Evidence type | Meaning | Typical use |
-|---|---|---|---|
-| E0 | Suspicion only | Keyword/comment/history suggests legacy support | Start investigation only |
-| E1 | Local static references | Search/AST shows no direct references in current repo | Useful but never sufficient for cross-repo/client/data paths |
-| E2 | Cross-boundary static references | API specs, shared packages, clients, jobs, configs, generated code, tests checked | Good for internal-only code |
-| E3 | Data reality | DB/table scans, object storage samples, queues, events, local storage keys, cached payloads checked | Needed for schema/format support |
-| E4 | Runtime reality | Logs, traces, analytics, access records, feature flag exposure, endpoint hits over a representative window | Needed for public/production-facing paths |
-| E5 | Human/contract confirmation | Owner, API policy, support policy, deprecation notice, customer/client confirmation | Needed when contracts are external or ambiguous |
-| E6 | Staged validation | dark-disable, shadow removal, canary, kill switch, rollback tested | Strongest removal proof for high-risk paths |
-
-Minimum evidence standard:
-
-- Low-risk internal fallback: E1 + tests may be enough.
-- Shared package or internal API: E2 + owner confirmation.
-- DB/data compatibility: E3 + migration/backfill proof + rollback plan.
-- Public API/mobile/client compatibility: E4 + E5 + staged rollout.
-- Auth, billing, compliance, deletion, privacy, security, or data-loss path: E4 + E5 + E6.
-
-## Review workflow
+## Workflow
 
 ### 1. Scope the candidate
 
-Create a candidate record for each legacy path:
+Create a candidate record:
 
 ```yaml
 candidate_id: LSA-001
 location: path/to/file.ts:123
 legacy_contract: "Accepts old payload field `user_id` in addition to `userId`."
-current_change: "PR removes the `user_id` fallback."
-owner: unknown
+change_under_review: "Removes the `user_id` fallback."
 risk_domain: api | database | frontend | mobile | job | config | build | model | security | unknown
-initial_verdict: investigate
+known_owner: unknown
+initial_concern: "Local references are gone, but old mobile clients may still send the field."
 ```
 
 ### 2. Recover history
 
-Use repository history to understand why the support was introduced:
+Use history to understand why the path exists:
 
-- `git blame <file>` around the branch/shim.
-- `git log -S '<legacy_token>' -- <file>` to find introduction/removal commits.
-- Search linked issues, PR titles, migration docs, release notes, incidents, and TODOs.
-- Check whether the compatibility path was tied to a specific migration, launch, customer, release, rollback, data import, or incident.
-
-Do not assume that “old” means “safe to delete.” Old support code often exists because an external contract outlived the original implementation.
+- `git blame <file>` around the compatibility branch.
+- `git log -S '<legacy token>' -- <path>` to find introduction/removal commits.
+- Search linked issues, PRs, incidents, release notes, migration docs, TODOs, and deprecation notices.
+- Identify whether the path came from a migration, rollout, public API promise, customer request, incident, rollback requirement, import format, or temporary repair.
 
 ### 3. Trace consumers
 
-Trace consumers in this order:
+Trace in this order:
 
-1. **Same file and same package** — direct calls, branches, tests, types, fixtures.
-2. **Same repository** — imports, route definitions, schema validators, generated code, config, env vars, scripts.
-3. **Adjacent repositories** — frontend, mobile, backend, cron, analytics, infra, SDKs, shared packages.
-4. **Data stores** — columns, JSON fields, object keys, event payloads, queue messages, cache entries, local storage.
-5. **Runtime systems** — logs, traces, endpoint hits, feature flag exposures, error reports, metrics.
-6. **Humans/contracts** — owners, release docs, API policies, migration guides, customer support constraints.
+1. Same function/file/package.
+2. Same repository.
+3. Adjacent repositories: web, mobile, backend, SDK, cron, analytics, infra, shared package.
+4. Data stores: relational rows, JSON blobs, object keys, event payloads, queues, caches, local storage, backups.
+5. Runtime systems: logs, traces, endpoint hits, metrics, feature flags, crash reports, support tickets.
+6. Human/contracts: code owners, public docs, API lifecycle policy, customer commitments, release policy.
 
-If you cannot inspect a layer, say so explicitly and lower confidence.
+If a layer is unavailable, say exactly what was not checked.
 
-### 4. Decide whether new legacy inputs are still possible
+### 4. Decide whether old inputs can still happen
 
-Ask whether current production can still create or receive the old shape:
+Do not confuse “current writer no longer emits old shape” with “old reader can be removed.” Ask:
 
-- Are old clients still accepted?
-- Are old app versions still active?
-- Can old events be replayed from queues or logs?
-- Can old files be imported?
-- Can stale local storage/session/cache values rehydrate?
-- Can rollback resurrect the old producer?
-- Can batch jobs, cron tasks, or third-party integrations still send it?
-- Does the DB still contain rows requiring this path?
-- Does test data or seed data incorrectly keep the path alive?
-
-A path is not removable merely because the current writer no longer emits the old format.
+- Are old clients still supported or installed?
+- Are old events replayable?
+- Can stale cached/session/local-storage values rehydrate?
+- Can old files still be imported?
+- Can rollback recreate the old producer?
+- Do migrations need to run from older database states?
+- Do backups/restores contain the old schema?
+- Do delayed jobs, queues, or webhooks still carry old payloads?
+- Is the path needed for support, privacy deletion, compliance, or account recovery?
 
 ### 5. Classify risk
 
-Use the highest applicable risk class:
+Use the highest applicable risk:
 
-- **P0 Critical:** auth, payments, privacy, security, legal retention, account access, irreversible data mutation/deletion.
-- **P1 High:** public API, mobile app compatibility, database schema migration, background jobs, customer integrations, cross-repo shared package.
-- **P2 Medium:** internal API, admin tool, analytics/reporting, import/export, feature flag cleanup.
-- **P3 Low:** local UI fallback, test-only shim, old copy, retired build option, internal script with owner confirmation.
+- **P0 Critical:** auth, payments, privacy, deletion, security, legal retention, account access, irreversible data mutation.
+- **P1 High:** public API, mobile compatibility, customer integration, database migration, cross-repo shared package, background job, webhooks.
+- **P2 Medium:** internal API, admin tool, analytics/reporting, import/export, feature flag cleanup, noncritical model fallback.
+- **P3 Low:** test-only shim, local UI fallback, old copy, retired build option, internal script with owner confirmation.
 
-### 6. Produce a verdict
-
-Use one of these verdicts:
+### 6. Choose a verdict
 
 #### RETAIN
-Use when the support contract still exists or evidence is too weak for removal but the path is clearly intentional.
 
-Required output:
-
-- What depends on it.
-- What tests/docs should preserve it.
-- Who owns the contract.
-- Whether it should be renamed/commented for clarity.
+Use when the contract still exists. Recommend preserving tests, comments, docs, or owner metadata so future reviewers do not repeatedly rediscover the same reason.
 
 #### DEPLOY OBSERVABILITY
-Use when the path may be removable but runtime/data evidence is missing.
 
-Required output:
-
-- What metric/log/event should be added.
-- Suggested observation window.
-- Expected threshold for removal.
-- Where the follow-up ticket should point.
+Use when the path may be dead but runtime/data evidence is missing. Recommend a specific metric/log/event, observation window, success threshold, and follow-up removal ticket.
 
 #### DEPRECATE
-Use when consumers still exist or may exist, but the team wants to end the contract.
 
-Required output:
-
-- Consumer migration path.
-- Communication mechanism.
-- Deprecation date and sunset/removal date if applicable.
-- Compatibility tests to keep until sunset.
+Use when consumers may still exist but the team wants to end support. Recommend migration steps, communication mechanism, deprecation signal, sunset/removal date, and temporary compatibility tests.
 
 #### QUARANTINE
-Use when the path is messy or risky but cannot be removed now.
 
-Required output:
-
-- Compatibility boundary name.
-- File/module where legacy logic should live.
-- Tests that lock current behavior.
-- Removal criteria.
+Use when the path is messy or risky but cannot be removed. Recommend moving it behind a named compatibility boundary with tests and clear removal criteria.
 
 #### REMOVE
-Use only when evidence shows the support contract no longer exists.
 
-Required output:
-
-- Evidence summary.
-- Risk classification.
-- Required tests.
-- Rollout/rollback note if production-facing.
-- Follow-up cleanup list.
+Use only when evidence shows the support contract no longer exists. Keep the removal focused, preserve regression tests for the canonical path, and include rollback notes for production-facing paths.
 
 ## Output format
 
-Every review should end with this block:
+End every review with:
 
 ```markdown
 ### Legacy Support Adjudication Verdict
@@ -200,7 +158,7 @@ Every review should end with this block:
 **Consumer reality:** <who still uses it, or what was checked>  
 **Producer reality:** <whether current systems can still produce/receive it>  
 **Evidence:**
-- <file/static evidence>
+- <static evidence>
 - <data/runtime evidence>
 - <owner/docs evidence>
 
@@ -213,66 +171,57 @@ Every review should end with this block:
 
 ## Review comment templates
 
-### Removal is under-evidenced
+### Under-evidenced removal
 
-> I would not remove this yet. This looks like compatibility logic rather than simple dead code. Before deletion, please identify the legacy contract it supports, check whether any current clients/data/jobs can still produce that shape, and add evidence from runtime logs or data scans if this crosses a repo/API/database boundary.
+> I would not remove this yet. This looks like compatibility support rather than ordinary dead code. Before deletion, please identify the exact legacy contract, check whether any current clients/data/jobs can still produce that shape, and add runtime or data evidence if this crosses a repo/API/database boundary.
 
-### Removal looks safe
+### Safe removal
 
-> This looks removable based on the evidence: no static consumers, current producers no longer emit the old shape, and runtime/data checks show no usage over the relevant window. Please keep the removal small, add/adjust regression tests around the new canonical path, and include a rollback note if this is production-facing.
+> This looks removable based on the evidence: no current static consumers, current producers no longer emit the old shape, and runtime/data checks show no usage over the representative window. Please keep the removal narrow, preserve tests around the canonical path, and include a rollback note if this is production-facing.
 
-### Quarantine instead of deletion
+### Quarantine first
 
-> I agree this legacy path is technical debt, but the support contract is not proven dead. I recommend moving it behind a named compatibility boundary with tests and adding instrumentation. That gives us a safe path to remove it later without spreading the shim further.
+> I agree this is compatibility debt, but the support contract is not proven dead. I recommend moving it behind a named compatibility boundary, adding tests for the legacy shape, and instrumenting it so we can remove it safely later.
 
-### Add deprecation path
+### Deprecation path needed
 
-> This should probably become a deprecation rather than an immediate removal. The PR should define the replacement behavior, identify known consumers, add deprecation signaling where appropriate, and create a dated removal criterion.
+> This should be handled as deprecation rather than immediate removal. The PR should identify known/possible consumers, describe the migration path, add deprecation signaling where appropriate, and define dated removal criteria.
 
-## Common false positives
+## Decision traps
 
-Do not flag these as removable without additional evidence:
+Actively rule these out before approving removal:
 
-- Historical migrations that must remain for fresh environment bootstraps.
-- Rollback paths needed during deploys.
-- Old schema readers needed for restored backups or delayed jobs.
-- API fallbacks used by mobile versions still in the wild.
-- Test fixtures representing real historical production data.
-- Importers for files users can still upload.
-- Admin/support scripts run rarely but intentionally.
-- Feature flag “off” branches still needed for safe rollback.
-- Data privacy/deletion code for old account states.
-- Build scripts for release branches still maintained.
+- Current writer is clean, but persisted data still needs the old reader.
+- Local repo has no references, but mobile clients, SDKs, public API consumers, or generated clients still use it.
+- Tests pass because they never modeled production history.
+- Feature flag is off, but rollback can reactivate the old producer.
+- A migration completed in production, but fresh bootstrap/staging/dev still needs migration history.
+- Event replay, queue retries, backups, imports, object storage, or webhooks can still surface old payloads.
+- Deprecated GraphQL/API fields are still used by generated clients.
+- Old auth/session/payment formats have account access or security implications.
+- “No telemetry” really means “not instrumented.”
 
 ## Hard rules
 
 - Do not approve removal solely because local static search found no references.
 - Do not assume current writers define all possible inputs.
 - Do not treat missing telemetry as proof of zero usage.
-- Do not remove migration history unless the project’s migration strategy explicitly allows squashing/pruning.
-- Do not remove compatibility paths from public APIs, mobile contracts, auth, billing, privacy, deletion, or migrations without a staged plan.
-- If evidence is incomplete, lower confidence and recommend observability or quarantine.
+- Do not remove migration history unless the project explicitly supports migration squashing/pruning.
+- Do not remove public API, mobile, auth, billing, privacy, deletion, or data migration compatibility without a staged plan.
+- If evidence is incomplete, lower confidence and recommend observability, quarantine, or deprecation.
 
-## Optional tools
+## Supporting assets
 
-This skill package includes:
+This repository includes:
 
-- `scripts/legacy_support_scan.py` — repository scanner for compatibility-debt signals.
-- `scripts/git_support_archaeology.sh` — quick git-history helper for a token or file.
-- `scripts/render_lsa_report.py` — converts scanner JSON into a review-ready markdown report.
-- `resources/legacy_patterns.yml` — pattern inventory for agents and scanners.
-- `resources/evidence_rubric.md` — detailed evidence thresholds.
-- `resources/report_template.md` — copyable verdict template.
+- `resources/evidence_rubric.md` — detailed evidence and risk rubric.
+- `resources/legacy_patterns.yml` — pattern taxonomy and search vocabulary.
+- `resources/report_template.md` — copyable verdict report.
+- `resources/review_comment_templates.md` — reusable review comments.
+- `examples/example_verdicts.md` — nuanced case studies.
+- `examples/decision_traps.md` — common false-removal traps.
+- `examples/agent_prompt.md` — prompt wrapper for review agents.
+- `scripts/legacy_support_scan.py` — heuristic scanner for candidate paths.
+- `scripts/git_support_archaeology.sh` — git history helper.
+- `scripts/render_lsa_report.py` — scanner JSON to markdown report.
 - `semgrep/legacy-support-patterns.yml` — starter Semgrep rules.
-
-## Agent behavior guidance
-
-When using this skill as a code-review agent:
-
-1. Be skeptical but not obstructionist.
-2. Prefer small, reversible cleanup PRs over broad refactors.
-3. Separate “this is ugly” from “this support contract is dead.”
-4. Ask for exactly the missing evidence needed for the risk level.
-5. Preserve momentum: when deletion is not yet safe, recommend observability, quarantine, or a dated deprecation plan.
-6. Be explicit about uncertainty.
-7. Never invent runtime evidence. If logs/data/owners were not checked, say that.
