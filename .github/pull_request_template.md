@@ -22,7 +22,7 @@ If this changes the skill's adjudication behavior, explain how it affects the ve
 
 ## Checklist
 
-- [ ] `SKILL.md` still has valid frontmatter with `name` and `description`.
+- [ ] `skills/legacy-support-adjudication/SKILL.md` still has valid frontmatter with `name` and `description`.
 - [ ] New guidance does not imply local static search alone is enough for risky removals.
 - [ ] Examples end with an actionable verdict.
 - [ ] Scripts compile on Python 3.9+.

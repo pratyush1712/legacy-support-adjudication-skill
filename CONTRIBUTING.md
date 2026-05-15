@@ -49,7 +49,7 @@ When changing scanner behavior:
 - keep it dependency-light
 - avoid repo-specific assumptions
 - prefer transparent output over clever inference
-- document new pattern categories in `resources/legacy_patterns.yml`
+- document new pattern categories in `skills/legacy-support-adjudication/references/legacy_patterns.yml`
 - add or update example output if behavior changes
 
 ## Semgrep rules
@@ -60,7 +60,7 @@ Rules should favor useful candidate discovery over aggressive blocking. Use clea
 
 Before opening a PR:
 
-- [ ] `SKILL.md` still describes when the skill should be invoked.
+- [ ] `skills/legacy-support-adjudication/SKILL.md` still describes when the skill should be invoked.
 - [ ] New examples end with an actionable verdict.
 - [ ] New guidance does not imply local static search is enough for risky removals.
 - [ ] Scripts still run on Python 3.9+.

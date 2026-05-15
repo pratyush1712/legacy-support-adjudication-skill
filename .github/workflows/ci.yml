@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [master, main]
 
+env:
+  SKILL_DIR: skills/legacy-support-adjudication
+
 jobs:
   validate:
     name: Validate skill package
@@ -20,43 +23,73 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install validator dependencies
+        run: |
+          pip install pyyaml
+          pip install 'git+https://github.com/agentskills/agentskills.git#subdirectory=skills-ref'
+
       - name: Verify required files
         run: |
-          test -f SKILL.md
+          test -f "$SKILL_DIR/SKILL.md"
           test -f README.md
           test -f LICENSE
-          test -d resources
-          test -d examples
-          test -d scripts
+          test -d "$SKILL_DIR/references"
+          test -d "$SKILL_DIR/examples"
+          test -d "$SKILL_DIR/scripts"
+          test -d "$SKILL_DIR/evals"
 
-      - name: Check skill frontmatter
+      - name: Run skills-ref validator (official spec check)
+        run: skills-ref validate "$SKILL_DIR"
+
+      - name: Frontmatter sanity check
         run: |
           python - <<'PY'
+          import os, re
           from pathlib import Path
-          text = Path('SKILL.md').read_text(encoding='utf-8')
-          assert text.startswith('---\n'), 'SKILL.md must start with YAML frontmatter'
-          head = text.split('---', 2)[1]
-          assert 'name:' in head, 'frontmatter must include name'
-          assert 'description:' in head, 'frontmatter must include description'
-          assert len(head.split('description:', 1)[1].strip()) > 80, 'description should be specific enough for auto-loading'
+          import yaml
+          text = (Path(os.environ['SKILL_DIR']) / 'SKILL.md').read_text(encoding='utf-8')
+          m = re.match(r'^---\n(.*?)\n---\n', text, re.DOTALL)
+          assert m, 'frontmatter delimiters not found'
+          data = yaml.safe_load(m.group(1))
+          assert data.get('name'), 'missing name'
+          assert data.get('description'), 'missing description'
+          assert len(data['description']) <= 1024, f'description too long: {len(data["description"])} > 1024'
+          assert len(data.get('description', '')) > 80, 'description should be specific enough for auto-loading'
+          assert len(data['name']) <= 64, f'name too long: {len(data["name"])} > 64'
+          assert re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', data['name']), f'name {data["name"]!r} violates spec naming rules'
+          dir_name = os.path.basename(os.environ['SKILL_DIR'])
+          assert dir_name == data['name'], f'directory {dir_name!r} must match skill name {data["name"]!r}'
+          print(f'frontmatter ok: name={data["name"]!r} description_len={len(data["description"])}')
           PY
-
-      - name: Parse YAML frontmatter
-        run: |
-          ruby -e "require 'yaml'; text = File.read('SKILL.md'); yaml = text.split('---', 3)[1]; data = YAML.safe_load(yaml); raise 'missing name' unless data['name']; raise 'missing description' unless data['description']"
 
       - name: Compile Python scripts
         run: |
-          python -m py_compile scripts/legacy_support_scan.py scripts/render_lsa_report.py
+          python -m py_compile "$SKILL_DIR/scripts/legacy_support_scan.py" "$SKILL_DIR/scripts/render_lsa_report.py"
 
-      - name: Smoke-test scanner
+      - name: Smoke-test scanner (JSON then render)
         run: |
-          python scripts/legacy_support_scan.py --root . --format json --output /tmp/legacy-support-candidates.json
-          python scripts/render_lsa_report.py /tmp/legacy-support-candidates.json --output /tmp/legacy-support-report.md
+          python "$SKILL_DIR/scripts/legacy_support_scan.py" --root . --format json --output /tmp/legacy-support-candidates.json
+          python "$SKILL_DIR/scripts/render_lsa_report.py" /tmp/legacy-support-candidates.json --output /tmp/legacy-support-report.md
           test -s /tmp/legacy-support-candidates.json
           test -s /tmp/legacy-support-report.md
 
       - name: Smoke-test direct Markdown scan
         run: |
-          python scripts/legacy_support_scan.py --root . --format markdown --output /tmp/legacy-support-scan.md
+          python "$SKILL_DIR/scripts/legacy_support_scan.py" --root . --format markdown --output /tmp/legacy-support-scan.md
           test -s /tmp/legacy-support-scan.md
+
+      - name: Smoke-test archaeology script (in-repo)
+        run: |
+          bash "$SKILL_DIR/scripts/git_support_archaeology.sh" legacy "$SKILL_DIR/SKILL.md" > /tmp/archaeology.out
+          test -s /tmp/archaeology.out
+
+      - name: Validate eval JSON files
+        run: |
+          python - <<'PY'
+          import json, os
+          base = os.path.join(os.environ['SKILL_DIR'], 'evals')
+          for name in ('trigger_queries.json', 'evals.json'):
+              data = json.loads(open(os.path.join(base, name)).read())
+              n = len(data) if isinstance(data, list) else len(data.get('evals', []))
+              print(f'{name}: parsed ok ({n} entries)')
+          PY

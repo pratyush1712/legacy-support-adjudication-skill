@@ -1,9 +1,9 @@
 # Legacy Support Adjudication
 
-[![Skill](https://img.shields.io/badge/Agent%20Skill-legacy--support--adjudication-blue)](./SKILL.md)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](./scripts/legacy_support_scan.py)
+[![Skill](https://img.shields.io/badge/Agent%20Skill-legacy--support--adjudication-blue)](./skills/legacy-support-adjudication/SKILL.md)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](./skills/legacy-support-adjudication/scripts/legacy_support_scan.py)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
-[![Semgrep Rules](https://img.shields.io/badge/Semgrep-rules-informational)](./semgrep/legacy-support-patterns.yml)
+[![Semgrep Rules](https://img.shields.io/badge/Semgrep-rules-informational)](./skills/legacy-support-adjudication/semgrep/legacy-support-patterns.yml)
 
 A professional agent skill for code-review agents that need to decide whether backward-compatibility logic is still required or has become removable technical debt.
 
@@ -67,9 +67,9 @@ npx skills find technical debt
 ### Claude Code personal skill
 
 ```bash
-mkdir -p ~/.claude/skills/legacy-support-adjudication
-git clone https://github.com/pratyush1712/legacy-support-adjudication-skill.git \
-  ~/.claude/skills/legacy-support-adjudication
+git clone https://github.com/pratyush1712/legacy-support-adjudication-skill.git /tmp/lsa-repo
+mkdir -p ~/.claude/skills
+cp -r /tmp/lsa-repo/skills/legacy-support-adjudication ~/.claude/skills/
 ```
 
 Then invoke it directly:
@@ -87,22 +87,23 @@ Review this PR and decide whether the legacy fallback can be removed.
 ### Project-local skill
 
 ```bash
+git clone https://github.com/pratyush1712/legacy-support-adjudication-skill.git /tmp/lsa-repo
 mkdir -p .claude/skills
-git submodule add https://github.com/pratyush1712/legacy-support-adjudication-skill.git \
-  .claude/skills/legacy-support-adjudication
+cp -r /tmp/lsa-repo/skills/legacy-support-adjudication .claude/skills/
 ```
 
 ### Manual install
 
-Copy this repository into any skill directory that expects a `SKILL.md` entrypoint.
+Copy `skills/legacy-support-adjudication/` from this repository into any directory that expects a `SKILL.md` entrypoint. The skill itself has this layout:
 
 ```text
 legacy-support-adjudication/
 ├── SKILL.md
-├── resources/
+├── references/
 ├── examples/
 ├── scripts/
-└── semgrep/
+├── semgrep/
+└── evals/
 ```
 
 ## Quick start
@@ -136,35 +137,39 @@ Focus on compatibility logic, migration shims, deprecated API bridges, old schem
 Do not treat lack of local references as enough evidence for removal. Trace code, data, client, runtime, and owner evidence where relevant. End with the verdict block required by the skill.
 ```
 
-See [`examples/agent_prompt.md`](./examples/agent_prompt.md) for a fuller version.
+See [`examples/agent_prompt.md`](./skills/legacy-support-adjudication/examples/agent_prompt.md) for a fuller version.
 
 ## Repository contents
 
+The skill itself lives in `skills/legacy-support-adjudication/`. Inside:
+
 | Path | Purpose |
 |---|---|
-| [`SKILL.md`](./SKILL.md) | Main skill instructions and invocation guidance. |
-| [`resources/evidence_rubric.md`](./resources/evidence_rubric.md) | Evidence levels, risk classes, and removal thresholds. |
-| [`resources/legacy_patterns.yml`](./resources/legacy_patterns.yml) | Pattern taxonomy and search vocabulary. |
-| [`resources/report_template.md`](./resources/report_template.md) | Copyable review verdict template. |
-| [`resources/review_comment_templates.md`](./resources/review_comment_templates.md) | Reusable code-review comments. |
-| [`examples/example_verdicts.md`](./examples/example_verdicts.md) | Complex real-world case studies and sample verdicts. |
-| [`examples/decision_traps.md`](./examples/decision_traps.md) | Common false-removal traps. |
-| [`scripts/legacy_support_scan.py`](./scripts/legacy_support_scan.py) | No-dependency Python scanner for compatibility-debt candidates. |
-| [`scripts/git_support_archaeology.sh`](./scripts/git_support_archaeology.sh) | Git-history helper for finding when support was introduced. |
-| [`scripts/render_lsa_report.py`](./scripts/render_lsa_report.py) | Converts scanner JSON into review-ready Markdown. |
-| [`semgrep/legacy-support-patterns.yml`](./semgrep/legacy-support-patterns.yml) | Starter Semgrep rules for compatibility patterns. |
+| [`SKILL.md`](./skills/legacy-support-adjudication/SKILL.md) | Main skill instructions and invocation guidance. |
+| [`references/evidence_rubric.md`](./skills/legacy-support-adjudication/references/evidence_rubric.md) | Evidence levels, risk classes, and removal thresholds. |
+| [`references/legacy_patterns.yml`](./skills/legacy-support-adjudication/references/legacy_patterns.yml) | Pattern taxonomy and search vocabulary. |
+| [`references/report_template.md`](./skills/legacy-support-adjudication/references/report_template.md) | Copyable review verdict template. |
+| [`references/review_comment_templates.md`](./skills/legacy-support-adjudication/references/review_comment_templates.md) | Reusable code-review comments. |
+| [`examples/example_verdicts.md`](./skills/legacy-support-adjudication/examples/example_verdicts.md) | Complex real-world case studies and sample verdicts. |
+| [`examples/decision_traps.md`](./skills/legacy-support-adjudication/examples/decision_traps.md) | Common false-removal traps. |
+| [`examples/agent_prompt.md`](./skills/legacy-support-adjudication/examples/agent_prompt.md) | Prompt wrapper for review agents. |
+| [`scripts/legacy_support_scan.py`](./skills/legacy-support-adjudication/scripts/legacy_support_scan.py) | No-dependency Python scanner for compatibility-debt candidates. |
+| [`scripts/git_support_archaeology.sh`](./skills/legacy-support-adjudication/scripts/git_support_archaeology.sh) | Git-history helper for finding when support was introduced. |
+| [`scripts/render_lsa_report.py`](./skills/legacy-support-adjudication/scripts/render_lsa_report.py) | Converts scanner JSON into review-ready Markdown. |
+| [`semgrep/legacy-support-patterns.yml`](./skills/legacy-support-adjudication/semgrep/legacy-support-patterns.yml) | Starter Semgrep rules for compatibility patterns. |
+| [`evals/`](./skills/legacy-support-adjudication/evals/) | Trigger-eval queries and output-quality test cases for description and verdict iteration. |
 
 ## Run the scanner
 
 ```bash
-python scripts/legacy_support_scan.py --root . --format json --output legacy-support-candidates.json
-python scripts/render_lsa_report.py legacy-support-candidates.json --output legacy-support-report.md
+python skills/legacy-support-adjudication/scripts/legacy_support_scan.py --root . --format json --output legacy-support-candidates.json
+python skills/legacy-support-adjudication/scripts/render_lsa_report.py legacy-support-candidates.json --output legacy-support-report.md
 ```
 
 For a direct Markdown scan without the intermediate JSON file:
 
 ```bash
-python scripts/legacy_support_scan.py --root . --format markdown --output legacy-support-scan.md
+python skills/legacy-support-adjudication/scripts/legacy_support_scan.py --root . --format markdown --output legacy-support-scan.md
 ```
 
 The scanner finds candidates. It does **not** approve deletion. Agents should use the evidence rubric before making a removal recommendation.
@@ -172,7 +177,7 @@ The scanner finds candidates. It does **not** approve deletion. Agents should us
 ## Run Semgrep rules
 
 ```bash
-semgrep --config semgrep/legacy-support-patterns.yml .
+semgrep --config skills/legacy-support-adjudication/semgrep/legacy-support-patterns.yml .
 ```
 
 ## What good output looks like
