@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  validate:
+    name: Validate skill package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify required files
+        run: |
+          test -f SKILL.md
+          test -f README.md
+          test -f LICENSE
+          test -d resources
+          test -d examples
+          test -d scripts
+
+      - name: Check skill frontmatter
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('SKILL.md').read_text(encoding='utf-8')
+          assert text.startswith('---\n'), 'SKILL.md must start with YAML frontmatter'
+          head = text.split('---', 2)[1]
+          assert 'name:' in head, 'frontmatter must include name'
+          assert 'description:' in head, 'frontmatter must include description'
+          assert len(head.split('description:', 1)[1].strip()) > 80, 'description should be specific enough for auto-loading'
+          PY
+
+      - name: Compile Python scripts
+        run: |
+          python -m py_compile scripts/legacy_support_scan.py scripts/render_lsa_report.py
+
+      - name: Smoke-test scanner
+        run: |
+          python scripts/legacy_support_scan.py --root . --output /tmp/legacy-support-candidates.json
+          python scripts/render_lsa_report.py /tmp/legacy-support-candidates.json --output /tmp/legacy-support-report.md
+          test -s /tmp/legacy-support-report.md
