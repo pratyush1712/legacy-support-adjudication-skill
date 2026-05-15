@@ -1,6 +1,7 @@
 ---
 name: legacy-support-adjudication
-description: "Use during code review when a change touches backward-compatibility logic, migration shims, deprecated API/version bridges, old schema or payload handling, feature-flag fallbacks, transitional formats, old client support, historical data readers, or retired runtime/build support. Produces an evidence-based verdict: retain, instrument, deprecate, quarantine, or remove."
+description: "Use during code review when a change touches backward-compatibility logic, migration shims, deprecated API/version bridges, old schema or payload handling, feature-flag fallbacks, transitional formats, old client support, historical data readers, or retired runtime/build support. Trigger even when the reviewer doesn't name 'compatibility' or 'deprecation' directly — questions like 'can we delete this yet?', 'is this still needed?', 'old clients?', 'migration complete?', or 'probably dead code' on a diff qualify, as do PRs that delete or simplify code paths named legacy/compat/fallback/shim/v1/deprecated. Produces an evidence-based verdict: retain, instrument, deprecate, quarantine, or remove."
+compatibility: "Requires Python 3.9+ and bash. Optional: Semgrep for the bundled ruleset. Works with any agent that can execute scripts."
 ---
 
 # Legacy Support Adjudication
@@ -28,7 +29,9 @@ A diff, PR, issue, or review discussion includes any of these signals:
 - Database code involving old columns/tables, nullable historical fields, dual reads, dual writes, shadow fields, backfills, repair jobs, or migration cleanup.
 - Frontend or mobile code normalizing historical API responses, old app versions, stale local storage/session keys, retired routes, or old deep links.
 - CI/build/deployment logic for old runtimes, old package managers, retired browsers, old operating systems, release branches, or retired environments.
-- Reviewer language like “can we delete this yet?”, “is this still needed?”, “old clients?”, “migration complete?”, “probably dead code”, or “cleanup legacy path.”
+- Reviewer language like "can we delete this yet?", "is this still needed?", "old clients?", "migration complete?", "probably dead code", or "cleanup legacy path."
+
+If you are uncertain whether a path matches one of these categories, consult `references/legacy_patterns.yml` for the full pattern taxonomy and search vocabulary.
 
 ## Core questions
 
@@ -61,6 +64,8 @@ Minimum standard:
 - **P1 data/API/mobile/job compatibility:** E3 and/or E4 plus rollout or migration plan.
 - **P0 auth, billing, privacy, deletion, security, or irreversible data mutation:** E4 + E5 + E6.
 
+For detailed examples of each evidence level and confidence-mapping guidance, see `references/evidence_rubric.md`.
+
 ## Workflow
 
 ### 1. Scope the candidate
@@ -77,6 +82,8 @@ known_owner: unknown
 initial_concern: "Local references are gone, but old mobile clients may still send the field."
 ```
 
+If the change matches multiple categories or the legacy contract is ambiguous, consult `references/legacy_patterns.yml` for the category taxonomy and the recommended `evidence_to_seek` list per category.
+
 ### 2. Recover history
 
 Use history to understand why the path exists:
@@ -85,6 +92,12 @@ Use history to understand why the path exists:
 - `git log -S '<legacy token>' -- <path>` to find introduction/removal commits.
 - Search linked issues, PRs, incidents, release notes, migration docs, TODOs, and deprecation notices.
 - Identify whether the path came from a migration, rollout, public API promise, customer request, incident, rollback requirement, import format, or temporary repair.
+
+For a one-shot history pull on a token or file, run:
+
+```bash
+bash scripts/git_support_archaeology.sh <token-or-file> [path]
+```
 
 ### 3. Trace consumers
 
@@ -101,7 +114,7 @@ If a layer is unavailable, say exactly what was not checked.
 
 ### 4. Decide whether old inputs can still happen
 
-Do not confuse “current writer no longer emits old shape” with “old reader can be removed.” Ask:
+Do not confuse "current writer no longer emits old shape" with "old reader can be removed." Ask:
 
 - Are old clients still supported or installed?
 - Are old events replayable?
@@ -113,6 +126,8 @@ Do not confuse “current writer no longer emits old shape” with “old reader
 - Do delayed jobs, queues, or webhooks still carry old payloads?
 - Is the path needed for support, privacy deletion, compliance, or account recovery?
 
+Before finalizing a removal verdict, scan `examples/decision_traps.md` to rule out common false-removal patterns.
+
 ### 5. Classify risk
 
 Use the highest applicable risk:
@@ -121,6 +136,8 @@ Use the highest applicable risk:
 - **P1 High:** public API, mobile compatibility, customer integration, database migration, cross-repo shared package, background job, webhooks.
 - **P2 Medium:** internal API, admin tool, analytics/reporting, import/export, feature flag cleanup, noncritical model fallback.
 - **P3 Low:** test-only shim, local UI fallback, old copy, retired build option, internal script with owner confirmation.
+
+For risk-to-evidence-minimum calibration, cross-reference `references/evidence_rubric.md`.
 
 ### 6. Choose a verdict
 
@@ -144,9 +161,11 @@ Use when the path is messy or risky but cannot be removed. Recommend moving it b
 
 Use only when evidence shows the support contract no longer exists. Keep the removal focused, preserve regression tests for the canonical path, and include rollback notes for production-facing paths.
 
+For worked examples of each verdict on realistic cases, see `examples/example_verdicts.md`.
+
 ## Output format
 
-End every review with:
+End every review with this block. For a copyable template with field hints, see `references/report_template.md`.
 
 ```markdown
 ### Legacy Support Adjudication Verdict
@@ -169,39 +188,11 @@ End every review with:
 - <concrete next action>
 ```
 
-## Review comment templates
-
-### Under-evidenced removal
-
-> I would not remove this yet. This looks like compatibility support rather than ordinary dead code. Before deletion, please identify the exact legacy contract, check whether any current clients/data/jobs can still produce that shape, and add runtime or data evidence if this crosses a repo/API/database boundary.
-
-### Safe removal
-
-> This looks removable based on the evidence: no current static consumers, current producers no longer emit the old shape, and runtime/data checks show no usage over the representative window. Please keep the removal narrow, preserve tests around the canonical path, and include a rollback note if this is production-facing.
-
-### Quarantine first
-
-> I agree this is compatibility debt, but the support contract is not proven dead. I recommend moving it behind a named compatibility boundary, adding tests for the legacy shape, and instrumenting it so we can remove it safely later.
-
-### Deprecation path needed
-
-> This should be handled as deprecation rather than immediate removal. The PR should identify known/possible consumers, describe the migration path, add deprecation signaling where appropriate, and define dated removal criteria.
-
-## Decision traps
-
-Actively rule these out before approving removal:
-
-- Current writer is clean, but persisted data still needs the old reader.
-- Local repo has no references, but mobile clients, SDKs, public API consumers, or generated clients still use it.
-- Tests pass because they never modeled production history.
-- Feature flag is off, but rollback can reactivate the old producer.
-- A migration completed in production, but fresh bootstrap/staging/dev still needs migration history.
-- Event replay, queue retries, backups, imports, object storage, or webhooks can still surface old payloads.
-- Deprecated GraphQL/API fields are still used by generated clients.
-- Old auth/session/payment formats have account access or security implications.
-- “No telemetry” really means “not instrumented.”
+For drafting the actual review comment that accompanies the verdict, see `references/review_comment_templates.md` for under-evidenced-removal, safe-removal, quarantine-first, and deprecation-path templates.
 
 ## Hard rules
+
+These apply on every adjudication, regardless of how confident the diff looks:
 
 - Do not approve removal solely because local static search found no references.
 - Do not assume current writers define all possible inputs.
@@ -210,18 +201,35 @@ Actively rule these out before approving removal:
 - Do not remove public API, mobile, auth, billing, privacy, deletion, or data migration compatibility without a staged plan.
 - If evidence is incomplete, lower confidence and recommend observability, quarantine, or deprecation.
 
-## Supporting assets
+## Optional: scan for candidates
 
-This repository includes:
+When reviewing a large PR or auditing a repository, the bundled scanner produces candidate paths to adjudicate:
 
-- `resources/evidence_rubric.md` — detailed evidence and risk rubric.
-- `resources/legacy_patterns.yml` — pattern taxonomy and search vocabulary.
-- `resources/report_template.md` — copyable verdict report.
-- `resources/review_comment_templates.md` — reusable review comments.
-- `examples/example_verdicts.md` — nuanced case studies.
-- `examples/decision_traps.md` — common false-removal traps.
+```bash
+# Scan the whole tree, emit a markdown report:
+python3 scripts/legacy_support_scan.py --root . --format markdown --output lsa-report.md
+
+# Scan only files changed vs a base ref:
+python3 scripts/legacy_support_scan.py --root . --changed-only --base origin/main --format json --output lsa.json
+
+# Render the JSON output into a compact review-ready report:
+python3 scripts/render_lsa_report.py lsa.json --top 25 --output lsa-review.md
+```
+
+The scanner produces E0 (suspicion-only) candidates. Each candidate still needs the full workflow above before any verdict.
+
+For Semgrep-based scanning, see `semgrep/legacy-support-patterns.yml`.
+
+## Bundled files
+
+- `scripts/legacy_support_scan.py` — heuristic candidate scanner (stdlib only).
+- `scripts/git_support_archaeology.sh` — git blame + `git log -S` helper.
+- `scripts/render_lsa_report.py` — JSON to markdown report renderer.
+- `references/evidence_rubric.md` — detailed evidence-level and confidence rubric.
+- `references/legacy_patterns.yml` — pattern taxonomy and search vocabulary by category.
+- `references/report_template.md` — copyable verdict-report skeleton.
+- `references/review_comment_templates.md` — reusable PR-review comment templates.
+- `examples/example_verdicts.md` — worked case studies with full verdict reasoning.
+- `examples/decision_traps.md` — common false-removal patterns to rule out.
 - `examples/agent_prompt.md` — prompt wrapper for review agents.
-- `scripts/legacy_support_scan.py` — heuristic scanner for candidate paths.
-- `scripts/git_support_archaeology.sh` — git history helper.
-- `scripts/render_lsa_report.py` — scanner JSON to markdown report.
-- `semgrep/legacy-support-patterns.yml` — starter Semgrep rules.
+- `semgrep/legacy-support-patterns.yml` — starter Semgrep ruleset.
