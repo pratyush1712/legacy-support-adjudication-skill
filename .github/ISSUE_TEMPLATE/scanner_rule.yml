@@ -1,0 +1,34 @@
+name: Suggest a scanner or Semgrep rule
+description: Propose a new compatibility-debt detection pattern.
+title: "Rule: "
+labels: ["scanner", "rule"]
+body:
+  - type: input
+    id: stack
+    attributes:
+      label: Stack or language
+      placeholder: "TypeScript / Python / GraphQL / SQL / Terraform / mobile"
+    validations:
+      required: true
+  - type: textarea
+    id: pattern
+    attributes:
+      label: Pattern
+      description: What should the scanner detect?
+      placeholder: "Detect fallback reads from old env var names like LEGACY_* or *_V1."
+    validations:
+      required: true
+  - type: textarea
+    id: false_positives
+    attributes:
+      label: False-positive risks
+      description: When should this not be flagged?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence the agent should ask for
+      description: What should reviewers check before remove/deprecate decisions?
+    validations:
+      required: true
