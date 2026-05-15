@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Local reports
+legacy-support-candidates.json
+legacy-support-report.md
+*.log
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
