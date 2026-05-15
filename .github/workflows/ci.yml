@@ -41,6 +41,10 @@ jobs:
           assert len(head.split('description:', 1)[1].strip()) > 80, 'description should be specific enough for auto-loading'
           PY
 
+      - name: Parse YAML frontmatter
+        run: |
+          ruby -e "require 'yaml'; text = File.read('SKILL.md'); yaml = text.split('---', 3)[1]; data = YAML.safe_load(yaml); raise 'missing name' unless data['name']; raise 'missing description' unless data['description']"
+
       - name: Compile Python scripts
         run: |
           python -m py_compile scripts/legacy_support_scan.py scripts/render_lsa_report.py
