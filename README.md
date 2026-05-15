@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](./skills/legacy-support-adjudication/scripts/legacy_support_scan.py)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![Semgrep Rules](https://img.shields.io/badge/Semgrep-rules-informational)](./skills/legacy-support-adjudication/semgrep/legacy-support-patterns.yml)
+[![skills.sh](https://skills.sh/b/pratyush1712/legacy-support-adjudication-skill)](https://skills.sh/pratyush1712/legacy-support-adjudication-skill)
 
 A professional agent skill for code-review agents that need to decide whether backward-compatibility logic is still required or has become removable technical debt.
 
