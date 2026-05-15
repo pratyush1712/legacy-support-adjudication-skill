@@ -6,8 +6,8 @@ This is a lightweight heuristic scanner for code-review agents. It does not prov
 that legacy support is removable. It produces candidates that need adjudication.
 
 Usage:
-  python scripts/legacy_support_scan.py --root . --format markdown > lsa-report.md
-  python scripts/legacy_support_scan.py --root . --format json > lsa-candidates.json
+  python scripts/legacy_support_scan.py --root . --format markdown --output lsa-report.md
+  python scripts/legacy_support_scan.py --root . --format json --output lsa-candidates.json
   python scripts/legacy_support_scan.py --root . --changed-only --base origin/main
 """
 
@@ -204,10 +204,20 @@ def render_markdown(findings: list[Finding], root: Path) -> str:
     return "\n".join(out)
 
 
+def write_or_print(content: str, output: str | None) -> None:
+    if output:
+        output_path = Path(output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(content + "\n", encoding="utf-8")
+    else:
+        print(content)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Find possible legacy-support logic for adjudication.")
     parser.add_argument("--root", default=".", help="Repository root")
     parser.add_argument("--format", choices=["json", "markdown"], default="markdown")
+    parser.add_argument("--output", help="Optional output file. Defaults to stdout.")
     parser.add_argument("--changed-only", action="store_true", help="Scan only files changed vs --base")
     parser.add_argument("--base", default="origin/main", help="Base ref for --changed-only")
     args = parser.parse_args()
@@ -219,9 +229,10 @@ def main() -> None:
         findings.extend(scan_file(root, path))
 
     if args.format == "json":
-        print(json.dumps({"summary": summarize(findings), "findings": [asdict(f) for f in findings]}, indent=2))
+        content = json.dumps({"summary": summarize(findings), "findings": [asdict(f) for f in findings]}, indent=2)
     else:
-        print(render_markdown(findings, root))
+        content = render_markdown(findings, root)
+    write_or_print(content, args.output)
 
 
 if __name__ == "__main__":
