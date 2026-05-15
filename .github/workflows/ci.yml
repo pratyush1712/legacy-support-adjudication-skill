@@ -47,6 +47,12 @@ jobs:
 
       - name: Smoke-test scanner
         run: |
-          python scripts/legacy_support_scan.py --root . --output /tmp/legacy-support-candidates.json
+          python scripts/legacy_support_scan.py --root . --format json --output /tmp/legacy-support-candidates.json
           python scripts/render_lsa_report.py /tmp/legacy-support-candidates.json --output /tmp/legacy-support-report.md
+          test -s /tmp/legacy-support-candidates.json
           test -s /tmp/legacy-support-report.md
+
+      - name: Smoke-test direct Markdown scan
+        run: |
+          python scripts/legacy_support_scan.py --root . --format markdown --output /tmp/legacy-support-scan.md
+          test -s /tmp/legacy-support-scan.md
